@@ -11,7 +11,6 @@ export async function main(ns: NS): Promise<void> {
 
     logger.tsuccess("network was successfully analyzed");
 
-
     let includeOwned = ns.args.includes("--include-owned") || ns.args.includes("-o");
     let verbose = ns.args.includes("--verbose") || ns.args.includes("-v");
     let schedulable = ns.args.includes("--schedulable") || ns.args.includes("-s");

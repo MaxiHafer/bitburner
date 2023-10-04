@@ -1,11 +1,13 @@
 import {Netplan, Server} from "/lib/netplan/netplan";
 import {NS} from "@ns";
 import {Logger} from "/lib/logger/logger";
+import {formatTime} from "/lib/time/time";
 
 const secPerThread: number = 0.05;
 const weakenScript: string = "/lib/protobatch/basicScripts/weaken.js"
 const growScript: string = "/lib/protobatch/basicScripts/grow.js"
 const hackScript: string = "/lib/protobatch/basicScripts/hack.js"
+const schedulerGracePeriod: number = 10000;
 
 export class ProtoBatcher {
     ns: NS
@@ -33,7 +35,7 @@ export class ProtoBatcher {
     }
 
     async run(): Promise<void> {
-        this.logger.tinfo(`starting ProtoBatcher targeting ${this.target.name} ${this.target.toString()}`)
+        this.logger.info(`starting ProtoBatcher targeting ${this.target.name} ${this.target.toString()}`)
 
         while (true) {
             this.target.update();
@@ -41,6 +43,17 @@ export class ProtoBatcher {
             let deltaSecurity = this.target.currentSecurity - this.target.minimumSecurity;
             let growthFactor = this.target.maximumMoney / this.target.currentMoney;
             let extractionAmount = this.target.maximumMoney * this.extractionFactor;
+
+            this.logger.info("Current status: " + JSON.stringify({
+                "Delta security": `${this.ns.formatNumber(deltaSecurity, 2)}`,
+                "Growth to target": `${this.ns.formatNumber(growthFactor, 2)}x`,
+                "Targeted extraction": `${this.ns.formatNumber(extractionAmount, 2)}$`,
+                "Server status": {
+                    "Hostname": this.target.name,
+                    "Security level": this.ns.formatNumber(this.target.currentSecurity, 2),
+                    "Current Money": `${this.ns.formatNumber(this.target.currentMoney,2)}$`,
+                },
+            }, undefined, "\t"));
 
             if (deltaSecurity !== 0) {
                 let requestedThreads = Math.ceil(deltaSecurity / secPerThread);
@@ -50,9 +63,14 @@ export class ProtoBatcher {
                 this.netplan.schedule(weakenScript, threads, this.target.name);
 
                 let sleepTime = this.ns.getWeakenTime(this.target.name);
-                this.logger.debug(`waiting for ${sleepTime / 1000} seconds for 'weaken' to complete...`)
 
-                await this.ns.sleep(sleepTime);
+                this.logger.info("Now running: " + JSON.stringify({
+                    "Duration": formatTime(sleepTime + schedulerGracePeriod),
+                    "Operation": "weaken",
+                    "Threads (actual/requested)": `${threads}/${requestedThreads}`,
+                }, undefined, "\t"));
+
+                await this.ns.sleep(sleepTime + schedulerGracePeriod);
 
             } else if (growthFactor > 1) {
                 let requestedThreads = Math.ceil(this.ns.growthAnalyze(this.target.name, growthFactor));
@@ -62,9 +80,14 @@ export class ProtoBatcher {
                 this.netplan.schedule(growScript, threads, this.target.name);
 
                 let sleepTime = this.ns.getGrowTime(this.target.name);
-                this.logger.debug(`waiting for ${sleepTime / 1000} seconds for 'grow' to complete...`)
 
-                await this.ns.sleep(sleepTime);
+                this.logger.info("Now running: " + JSON.stringify({
+                    "Duration": formatTime(sleepTime + schedulerGracePeriod),
+                    "Operation": "grow",
+                    "Threads (actual/requested)": `${threads}/${requestedThreads}`,
+                }, undefined, "\t"));
+
+                await this.ns.sleep(sleepTime + schedulerGracePeriod);
 
             } else {
 
@@ -78,8 +101,13 @@ export class ProtoBatcher {
 
                 let sleepTime = this.ns.getHackTime(this.target.name);
 
-                this.logger.debug(`waiting for ${sleepTime / 1000} seconds for 'hack' to complete...`)
-                await this.ns.sleep(sleepTime);
+                this.logger.info("Now running: " + JSON.stringify({
+                    "Duration": formatTime(sleepTime + schedulerGracePeriod),
+                    "Operation": "grow",
+                    "Threads (actual/requested)": `${threads}/${requestedThreads}`,
+                }, undefined, "\t"));
+
+                await this.ns.sleep(sleepTime +schedulerGracePeriod);
             }
         }
     }

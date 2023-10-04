@@ -152,6 +152,7 @@ export class Server {
       "Root access": this.isRooted,
       "Total RAM": this.ns.formatRam(this.totalRam),
       "Used RAM": this.ns.formatRam(this.currentRam),
+      "Minimum hacking level": this.minimumHackingLevel,
       "Current security level": this.currentSecurity,
       "Minimum security level": this.minimumSecurity,
       "Current money": this.ns.formatNumber(this.currentMoney),
