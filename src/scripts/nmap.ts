@@ -1,6 +1,7 @@
 import {NS} from "@ns";
-import {Netplan, Server} from "/lib/netplan/netplan";
+import {Netplan} from "/lib/netplan/netplan";
 import {Logger} from "/lib/logger/logger";
+import {Server} from "/lib/netplan/server";
 
 export async function main(ns: NS): Promise<void> {
     let logger = new Logger(ns);
@@ -18,13 +19,14 @@ export async function main(ns: NS): Promise<void> {
     let servers = netplan.network.filter(server => {
         return (
             (includeOwned || !server.name.startsWith("srv")) &&
-            (!schedulable || server.schedule)
+            (!schedulable || (server.schedule && server.isRooted))
         )
     })
 
     if (verbose) {
         servers.forEach(server => logger.tinfo(server.toString()))
     }
+
 
    let totalRam: number = 0;
    let usedRam: number = 0;

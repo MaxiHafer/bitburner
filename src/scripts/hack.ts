@@ -1,7 +1,7 @@
 import {NS} from "@ns";
 import {ProtoBatcher} from "/lib/protobatch/manager";
-import {Server} from "/lib/netplan/netplan";
 import {Logger} from "/lib/logger/logger";
+import {Server} from "/lib/netplan/server";
 
 export async function main(ns: NS): Promise<void> {
     ns.disableLog("ALL");

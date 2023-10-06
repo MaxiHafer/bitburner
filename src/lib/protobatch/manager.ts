@@ -1,7 +1,8 @@
-import {Netplan, Server} from "/lib/netplan/netplan";
+import {Netplan} from "/lib/netplan/netplan";
 import {NS} from "@ns";
 import {Logger} from "/lib/logger/logger";
 import {formatTime} from "/lib/time/time";
+import {Server} from "/lib/netplan/server";
 
 const secPerThread: number = 0.05;
 const weakenScript: string = "/lib/protobatch/basicScripts/weaken.js"
@@ -16,11 +17,11 @@ export class ProtoBatcher {
     extractionFactor: number;
     logger: Logger;
 
-    constructor(ns: NS, target: Server, logger: Logger, extractionFactor: number = 0.25, host: string = "home") {
+    constructor(ns: NS, target: Server, logger: Logger, extractionFactor: number = 0.25, host: string = "home", scheduleOnHome = true) {
         this.ns = ns;
         this.logger = logger;
         this.target = target;
-        this.netplan = new Netplan(ns, logger, host);
+        this.netplan = new Netplan(ns, logger, host, scheduleOnHome);
         this.extractionFactor = extractionFactor
     }
 
@@ -39,6 +40,7 @@ export class ProtoBatcher {
 
         while (true) {
             this.target.update();
+            this.netplan.update();
 
             let deltaSecurity = this.target.currentSecurity - this.target.minimumSecurity;
             let growthFactor = this.target.maximumMoney / this.target.currentMoney;
@@ -103,7 +105,7 @@ export class ProtoBatcher {
 
                 this.logger.info("Now running: " + JSON.stringify({
                     "Duration": formatTime(sleepTime + schedulerGracePeriod),
-                    "Operation": "grow",
+                    "Operation": "hack",
                     "Threads (actual/requested)": `${threads}/${requestedThreads}`,
                 }, undefined, "\t"));
 

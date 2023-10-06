@@ -1,6 +1,6 @@
 import { NS } from "@ns";
-import {Server} from "/lib/netplan/netplan";
 import {Logger} from "/lib/logger/logger";
+import {Server} from "/lib/netplan/server";
 
 export class RootingManager {
     ns: NS
@@ -32,8 +32,6 @@ export class RootingManager {
         }
 
         this.logger.debug(`initialized RootingManager with ${this.crackers.length} crackers`)
-
-        this.crackers.push(ns.nuke);
     }
 
     tryRoot(server: Server): boolean {
@@ -53,6 +51,8 @@ export class RootingManager {
         }
 
         this.crackers.forEach(fn => fn(server.name));
+
+        this.ns.nuke(server.name);
 
         this.logger.success(`rooted new server (${server.name})`);
 
