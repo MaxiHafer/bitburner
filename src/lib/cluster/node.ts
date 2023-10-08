@@ -3,8 +3,9 @@ import {JSONLogger} from "/lib/logger/logger";
 import {Script} from "/lib/cluster/job";
 
 export type NodeOpts = {
-    schedulable: boolean,
-    scheduleOrder: number,
+    schedulable?: boolean,
+    reservedRAM?: number,
+    scheduleOrder?: number,
 }
 
 export class Node {
@@ -12,17 +13,18 @@ export class Node {
     log: JSONLogger;
 
     private server: Server
-    readonly schedulable: boolean;
+    readonly reservedRAM: number;
     readonly scheduleOrder: number;
 
     constructor(ns: NS, logger: JSONLogger, host: string, opts?: NodeOpts) {
         this.ns = ns;
         this.log = logger;
 
-        this.schedulable = opts?.schedulable ?? true;
+        this.server = ns.getServer(host);
+
         this.scheduleOrder = opts?.scheduleOrder ?? 0;
 
-        this.server = ns.getServer(host);
+        this.reservedRAM = (!(opts?.schedulable ?? true)) ? this.getTotalRAM() : opts?.reservedRAM ?? 0;
     }
 
     scan(): Node[] {
@@ -69,7 +71,11 @@ export class Node {
     }
 
     getScriptThreads(script: Script): number {
-        return Math.floor( this.getFreeRAM() / script.getScriptRamOn(this) );
+        return Math.floor( this.getSchedulableRAM() / script.getScriptRamOn(this) );
+    }
+
+    getSchedulableRAM(): number {
+        return (this.getFreeRAM() - this.reservedRAM) > 0 ? this.getFreeRAM() - this.reservedRAM  : 0
     }
 
     getUsedRAM(): number {
@@ -108,6 +114,24 @@ export class Node {
         }
 
         return crackers
+    }
+
+    pretty(): any {
+        return {
+            "Name": this.server.hostname,
+            "Root access": this.server.hasAdminRights,
+            "Total RAM": this.ns.formatRam(this.getTotalRAM()),
+            "Reserved RAM": this.ns.formatRam(this.reservedRAM),
+            "Schedulable RAM": this.ns.formatRam(this.getSchedulableRAM()),
+            "Used RAM": this.ns.formatRam(this.getUsedRAM()),
+            "Minimum hacking level": this.server.requiredHackingSkill,
+            "Current security level": this.server.hackDifficulty,
+            "Minimum security level": this.server.minDifficulty,
+            "Current money": this.ns.formatNumber(this.server.moneyAvailable!),
+            "Maximum money": this.ns.formatNumber(this.server.moneyMax!),
+            "Growth factor": this.server.serverGrowth,
+            "Needed open Ports": this.server.numOpenPortsRequired,
+        }
     }
 
 }

@@ -14,7 +14,7 @@ const scripts = {
     hack: "/lib/hwgwbatch/scripts/hack.js",
 }
 
-export class HWGWBatch {
+export class Batch {
     private readonly ns: NS
     private readonly log: JSONLogger;
     private readonly source: Node;
@@ -91,6 +91,8 @@ export class HWGWBatch {
             growScript,
             growWeakenScript
         )
+
+        job.setExecutionTime(growWeakenFinish);
 
         return job;
 

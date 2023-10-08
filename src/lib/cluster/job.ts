@@ -27,6 +27,7 @@ export class Script {
 
     exec(target: Node, threads: number): number {
         this.assertPresentOn(target);
+        this.log.debug("executing script", {file: this.file, executor: target.getHostname(), threads: this.threads, args: this.args});
         return this.ns.exec(this.file, target.getHostname(), this.threads, ...this.args);
     }
 
@@ -39,6 +40,15 @@ export class Script {
     getScriptRamOn(target?: Node): number {
         return this.ns.getScriptRam(this.file, target?.getHostname());
     }
+
+    pretty(): any {
+        return {
+            "File": this.file,
+            "Source": this.source.getHostname(),
+            "Threads":  this.threads,
+            "Args": this.args,
+        }
+    }
 }
 
 export class Job {
@@ -47,6 +57,7 @@ export class Job {
     readonly name: string;
 
     private scripts: Script[] = [];
+    private executionTime?: number
 
     constructor(ns: NS, log: JSONLogger, name: string) {
         this.ns = ns;
@@ -56,6 +67,14 @@ export class Job {
 
     forEachScript(fn: (script: Script, index: number, array: Script[]) => void ) {
         this.scripts.forEach(fn)
+    }
+
+    setExecutionTime(time: number) {
+        this.executionTime = time;
+    }
+
+    getExecutionTime(): number | undefined {
+        return this.executionTime;
     }
 
     getScripts(): Script[] {
@@ -71,12 +90,6 @@ export class Job {
 
     addScripts(...scripts: Script[]) {
         this.scripts.push(...scripts)
-    }
-
-    execute(fn: NodeSelector): void {
-        this.scripts.forEach( script => {
-
-        })
     }
 }
 

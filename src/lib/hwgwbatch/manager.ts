@@ -1,60 +1,39 @@
 import {JSONLogger} from "/lib/logger/logger";
 import {NS} from "@ns";
 import {Node} from "/lib/cluster/node";
-import {HWGWBatch} from "/lib/hwgwbatch/HWGWBatch.js";
+import {Batch} from "/lib/hwgwbatch/batch.js";
 import {Job} from "/lib/cluster/job";
 import {Cluster} from "/lib/cluster/cluster";
 
-const targets: string[] = [
-    "omega-net"
-];
-
-export async function main(ns: NS) {
-    let log = new JSONLogger(ns, {pretty: true, debug: true});
-    let targetNodes: Node[] = [];
-
-    targets.forEach(hostname => targetNodes.push(new Node(ns, log, hostname)));
-
-    let manager = new HWGWManager(ns, log, targetNodes);
-
-    manager.run();
-}
-
-const extractionFactor: number = 0.25;
-
-class HWGWManager {
-    private ns: NS
-    private log: JSONLogger
-    private targets: Node[];
+export class HWGWManager {
+    private readonly ns: NS
+    private readonly log: JSONLogger
+    private readonly target: Node;
+    private node: Node;
     private cluster: Cluster;
+    private extractionFactor: number;
 
-
-    constructor(ns: NS, log: JSONLogger,cluster: Cluster, targets: Node[]) {
+    constructor(ns: NS, log: JSONLogger,cluster: Cluster, target: Node, source: Node, extractionFactor: number = 0.25) {
         this.ns = ns;
         this.log = log;
-        this.targets = targets;
+        this.target = target;
         this.cluster = cluster;
+        this.node = source;
+        this.extractionFactor = extractionFactor
     }
 
     async run() {
-        let batches: HWGWBatch[] = [];
-        this.targets.forEach(target => batches.push(new HWGWBatch(this.ns, this.log, node, this.cluster.getHomeNode())));
+        let job = new Batch(this.ns, this.log, this.target, this.node, this.extractionFactor).getJob();
+        let jobFinishDelay = job.getExecutionTime();
+
+        if (!jobFinishDelay) {
+            this.log.error("no finish time set on job.");
+            this.ns.exit();
+        }
 
         while(true) {
-            for
-
-            for (let node of this.targets) {
-                let batch = new HWGWBatch(this.ns, this.log, node, this.cluster.getHomeNode());
-                await this.cluster.execute(batch.getJob());
-            }
-
+            await this.cluster.execute(job);
+            await this.ns.sleep(jobFinishDelay + 200);
         }
     }
-
-    newHWGWBatch(target: Node, extractionFactor: number): Job {
-        new HWGWBatch(this.ns, this.log, target, extractionFactor)
-    }
-
-
-
 }

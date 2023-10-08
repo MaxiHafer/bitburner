@@ -4,14 +4,7 @@ import {JSONLogger} from "/lib/logger/logger";
 import {Node} from "/lib/cluster/node";
 import {Job, Script} from "/lib/cluster/job";
 
-const home: string = "home";
 const clusterConfig: string = "/data/cluster.txt";
-
-export async function main(ns: NS): Promise<void> {
-    let log = new JSONLogger(ns, {pretty: true, debug: true});
-
-    let cluster = new Cluster(ns, log);
-}
 
 export class Cluster {
     private readonly ns: NS;
@@ -19,37 +12,30 @@ export class Cluster {
 
     private nodes: Node[] = [];
     private isLocked = false;
-    private home!: Node;
+    private readonly node: Node;
 
-    constructor(ns: NS, log: JSONLogger) {
+    constructor(ns: NS, log: JSONLogger, node: Node) {
         this.ns = ns;
         this.log = log;
+        this.node = node;
+
+        this.initialize();
     }
 
     initialize(): void {
-        if (this.ns.getHostname() !== home) {
-            this.log.error(`cluster be created on ${home}`);
-            this.ns.exit();
-        }
-
-        this.home = new Node(this.ns, this.log, home);
-        if (this.ns.fileExists(clusterConfig)) {
+        if (this.ns.fileExists(clusterConfig, this.node.getHostname())) {
             let data = this.ns.read(clusterConfig);
             this.nodes = JSON.parse(data);
         } else {
             this.log.info("initializing cluster from network");
-            this.probe(this.home);
+            this.probe(this.node);
         }
 
         this.update();
     }
 
     getFilteredNodesForScheduling(): Node[] {
-        return this.nodes.filter(node => node.schedulable).sort((a, b) => a.scheduleOrder - b.scheduleOrder );
-    }
-
-    getHomeNode(): Node {
-        return this.home;
+       return this.nodes.filter(node => node.getSchedulableRAM() > 0).sort((a, b) => a.scheduleOrder - b.scheduleOrder );
     }
 
     async getLock(handle: string) {
@@ -86,7 +72,7 @@ export class Cluster {
         if (!isSchedulable) {
             this.log.error("job is not schedulable", {name: job.name});
             releaseLock();
-            return undefined
+            return undefined;
         }
 
         return [jobSchedule, releaseLock];
@@ -143,6 +129,7 @@ export class Cluster {
         })
 
         jobSchedule.forEach((scriptSchedule: ScriptSchedule, script: Script) => {
+            this.log.info("dispatching script", {name: job.name, script: script.pretty()});
             scriptSchedule.forEach((threads: number, node: Node) => {
                 script.exec(node, threads);
             })
