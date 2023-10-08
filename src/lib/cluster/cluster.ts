@@ -1,10 +1,10 @@
 
-import {NS, Server} from "@ns";
+import {NS} from "@ns";
 import {JSONLogger} from "/lib/logger/logger";
 import {Node} from "/lib/cluster/node";
 import {Job, Script} from "/lib/cluster/job";
 
-const clusterConfig: string = "/data/cluster.txt";
+const clusterConfig = "/data/cluster.txt";
 
 export class Cluster {
     private readonly ns: NS;
@@ -24,7 +24,7 @@ export class Cluster {
 
     initialize(): void {
         if (this.ns.fileExists(clusterConfig, this.node.getHostname())) {
-            let data = this.ns.read(clusterConfig);
+            const data = this.ns.read(clusterConfig);
             this.nodes = JSON.parse(data);
         } else {
             this.log.info("initializing cluster from network");
@@ -40,7 +40,7 @@ export class Cluster {
 
     async getLock(handle: string) {
         if (this.isLocked) {
-            let start = new Date();
+            const start = new Date();
             this.log.warn(`scheduler is locked`, {handle: handle});
             while(this.isLocked) {
                 await this.ns.sleep(1000);
@@ -53,13 +53,13 @@ export class Cluster {
     }
 
     async scheduleJob(job: Job, nodes: Node[] = this.nodes): Promise<JobScheduleWithLockRelease | undefined> {
-        let releaseLock = await this.getLock(job.name);
+        const releaseLock = await this.getLock(job.name);
 
-        let jobSchedule: Map<Script, ScriptSchedule> = new Map<Script, Map<Node, number>>();
+        const jobSchedule: Map<Script, ScriptSchedule> = new Map<Script, Map<Node, number>>();
 
         let isSchedulable = true;
-        for (let script of job.getScripts()) {
-            let scriptSchedule = this.scheduleScript(script, nodes);
+        for (const script of job.getScripts()) {
+            const scriptSchedule = this.scheduleScript(script, nodes);
 
             if (!scriptSchedule){
                 isSchedulable = false;
@@ -79,14 +79,16 @@ export class Cluster {
     }
 
     scheduleScript(script: Script, nodes: Node[] = this.nodes): ScriptSchedule | undefined {
-        let scriptSchedule = new Map<Node, number>;
+        const scriptSchedule = new Map<Node, number>;
 
         let remainingThreads = script.threads;
-        for (let node of nodes) {
+        for (const node of nodes) {
             if (remainingThreads > 0) {
-                let threadsOnNode = node.getScriptThreads(script);
-                scriptSchedule.set(node, threadsOnNode > remainingThreads ? remainingThreads : threadsOnNode);
-                remainingThreads -= threadsOnNode;
+                const threadsOnNode = node.getScriptThreads(script);
+                if (threadsOnNode > 0) {
+                    scriptSchedule.set(node, threadsOnNode > remainingThreads ? remainingThreads : threadsOnNode);
+                    remainingThreads -= threadsOnNode;
+                }
                 continue;
             }
             break;
@@ -111,25 +113,24 @@ export class Cluster {
     }
 
     async execute(job: Job): Promise<void> {
-        let nodes = this.getFilteredNodesForScheduling();
-        let scheduleWithLock = await this.scheduleJob(job, nodes);
+        const nodes = this.getFilteredNodesForScheduling();
+        const scheduleWithLock = await this.scheduleJob(job, nodes);
 
         if(!scheduleWithLock) {
             this.log.error("error while executing job", {name: job.name});
             return undefined;
         }
 
-        let [jobSchedule, releaseLock] = scheduleWithLock;
-        let jobMetrics = this.getJobMetrics(jobSchedule);
+        const [jobSchedule, releaseLock] = scheduleWithLock;
+        const jobMetrics = this.getJobMetrics(jobSchedule);
 
         this.log.info("dispatching job", {
             name: job.name,
             ram: this.ns.formatRam(jobMetrics.totalRAM, 2),
             threads: jobMetrics.totalThreads,
-        })
+        });
 
         jobSchedule.forEach((scriptSchedule: ScriptSchedule, script: Script) => {
-            this.log.info("dispatching script", {name: job.name, script: script.pretty()});
             scriptSchedule.forEach((threads: number, node: Node) => {
                 script.exec(node, threads);
             })
@@ -139,7 +140,7 @@ export class Cluster {
     }
 
     getJobMetrics(jobSchedule: Map<Script, ScriptSchedule>): JobMetrics {
-        let metrics: JobMetrics = {
+        const metrics: JobMetrics = {
             totalRAM: 0,
             totalThreads: 0
         }

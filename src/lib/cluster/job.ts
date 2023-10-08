@@ -11,7 +11,7 @@ export class Script {
     readonly threads: number;
     private source: Node;
 
-    constructor(ns: NS, log: JSONLogger, source: Node, file: string, threads: number = 1,  ...args: any[]) {
+    constructor(ns: NS, log: JSONLogger, source: Node, file: string, threads = 1,  ...args: any[]) {
         this.ns = ns;
         this.log = log;
 
@@ -27,8 +27,7 @@ export class Script {
 
     exec(target: Node, threads: number): number {
         this.assertPresentOn(target);
-        this.log.debug("executing script", {file: this.file, executor: target.getHostname(), threads: this.threads, args: this.args});
-        return this.ns.exec(this.file, target.getHostname(), this.threads, ...this.args);
+        return this.ns.exec(this.file, target.getHostname(), threads, ...this.args);
     }
 
     assertPresentOn(target: Node) {
@@ -41,7 +40,7 @@ export class Script {
         return this.ns.getScriptRam(this.file, target?.getHostname());
     }
 
-    pretty(): any {
+    pretty(): object {
         return {
             "File": this.file,
             "Source": this.source.getHostname(),

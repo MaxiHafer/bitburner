@@ -33,7 +33,7 @@ export class Node {
 
     update(): void {
         if (!this.server.hasAdminRights && this.server.numOpenPortsRequired) {
-            let crackers = this.getCrackers();
+            const crackers = this.getCrackers();
 
             if (crackers.length >= this.server.numOpenPortsRequired) {
                 this.log.info("rooting new", {
@@ -50,6 +50,10 @@ export class Node {
         this.server = this.ns.getServer(this.server.hostname);
     }
 
+    isMinimumSecurity(): boolean {
+        return this.
+    }
+
     getWeakenTime(): number {
         return this.ns.getWeakenTime(this.server.hostname);
     }
@@ -60,6 +64,10 @@ export class Node {
 
     getGrowTime(): number {
         return this.ns.getGrowTime(this.server.hostname);
+    }
+
+    getAvailableMoney(): number {
+        return this.server.moneyAvailable ?? 0;
     }
 
     getMaxMoney(): number {
@@ -91,7 +99,7 @@ export class Node {
     }
 
     private getCrackers(): ((host: string) => void)[] {
-        let crackers: ((host: string) => void)[] = [];
+        const crackers: ((host: string) => void)[] = [];
 
         if (this.ns.fileExists("relaySMTP.exe", "home")) {
             crackers.push(this.ns.relaysmtp);

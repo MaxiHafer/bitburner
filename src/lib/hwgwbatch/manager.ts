@@ -13,7 +13,7 @@ export class HWGWManager {
     private cluster: Cluster;
     private extractionFactor: number;
 
-    constructor(ns: NS, log: JSONLogger,cluster: Cluster, target: Node, source: Node, extractionFactor: number = 0.25) {
+    constructor(ns: NS, log: JSONLogger,cluster: Cluster, target: Node, source: Node, extractionFactor = 0.25) {
         this.ns = ns;
         this.log = log;
         this.target = target;
@@ -23,8 +23,8 @@ export class HWGWManager {
     }
 
     async run() {
-        let job = new Batch(this.ns, this.log, this.target, this.node, this.extractionFactor).getJob();
-        let jobFinishDelay = job.getExecutionTime();
+        const job = new Batch(this.ns, this.log, this.target, this.node, this.extractionFactor).getJob();
+        const jobFinishDelay = job.getExecutionTime();
 
         if (!jobFinishDelay) {
             this.log.error("no finish time set on job.");
