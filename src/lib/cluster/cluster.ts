@@ -35,7 +35,7 @@ export class Cluster {
     }
 
     getFilteredNodesForScheduling(): Node[] {
-       return this.nodes.filter(node => node.getSchedulableRAM() > 0).sort((a, b) => a.scheduleOrder - b.scheduleOrder );
+       return this.nodes.filter(node => node.isRooted() && node.getSchedulableRAM() > 0).sort((a, b) => a.scheduleOrder - b.scheduleOrder );
     }
 
     async getLock(handle: string) {
@@ -84,7 +84,7 @@ export class Cluster {
         let remainingThreads = script.threads;
         for (const node of nodes) {
             if (remainingThreads > 0) {
-                const threadsOnNode = node.getScriptThreads(script);
+                let threadsOnNode = node.getScriptThreads(script);
                 if (threadsOnNode > 0) {
                     scriptSchedule.set(node, threadsOnNode > remainingThreads ? remainingThreads : threadsOnNode);
                     remainingThreads -= threadsOnNode;
@@ -113,6 +113,7 @@ export class Cluster {
     }
 
     async execute(job: Job): Promise<void> {
+        this.update();
         const nodes = this.getFilteredNodesForScheduling();
         const scheduleWithLock = await this.scheduleJob(job, nodes);
 

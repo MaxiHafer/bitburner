@@ -12,74 +12,94 @@ export class Node {
     ns: NS;
     log: JSONLogger;
 
-    private server: Server
     readonly reservedRAM: number;
     readonly scheduleOrder: number;
+    private readonly hostname: string;
 
     constructor(ns: NS, logger: JSONLogger, host: string, opts?: NodeOpts) {
         this.ns = ns;
         this.log = logger;
-
-        this.server = ns.getServer(host);
+        this.hostname = host;
 
         this.scheduleOrder = opts?.scheduleOrder ?? 0;
-
         this.reservedRAM = (!(opts?.schedulable ?? true)) ? this.getTotalRAM() : opts?.reservedRAM ?? 0;
     }
 
     scan(): Node[] {
-        return this.ns.scan(this.server.hostname).map((hostname: string) => new Node(this.ns, this.log, hostname));
+        return this.ns.scan(this.getHostname()).map((hostname: string) => new Node(this.ns, this.log, hostname));
     }
 
     update(): void {
-        if (!this.server.hasAdminRights && this.server.numOpenPortsRequired) {
-            const crackers = this.getCrackers();
+        const crackers = this.getCrackers();
+        if (!this.isRooted() && this.getOpenPortsRequired() <= crackers.length) {
 
-            if (crackers.length >= this.server.numOpenPortsRequired) {
-                this.log.info("rooting new", {
-                    hostname: this.server.hostname,
-                    requiredOpenPorts: this.server.numOpenPortsRequired,
-                    availableCrackers: crackers.length
-                })
+            this.log.info("rooting new server", {
+                hostname: this.getHostname(),
+                requiredOpenPorts: this.getOpenPortsRequired(),
+                availableCrackers: crackers.length
+            })
 
-                this.getCrackers().forEach(fn => fn(this.server.hostname));
-                this.ns.nuke(this.server.hostname);
-            }
+            this.getCrackers().forEach(fn => fn(this.getHostname()));
+            this.ns.nuke(this.getHostname());
         }
+    }
 
-        this.server = this.ns.getServer(this.server.hostname);
+    getOpenPortsRequired(): number {
+        return this.ns.getServerNumPortsRequired(this.getHostname());
+    }
+
+    isRooted(): boolean {
+        return this.ns.hasRootAccess(this.getHostname());
+    }
+
+    getSecurityLevel(): number {
+        return this.ns.getServerSecurityLevel(this.getHostname());
+    }
+
+    getMoneyAvailable(): number {
+        return this.ns.getServerMoneyAvailable(this.getHostname());
     }
 
     isMinimumSecurity(): boolean {
-        return this.
+        return this.getSecurityLevel() == this.getMinSecurityLevel();
+    }
+
+    getMinSecurityLevel() {
+        return this.ns.getServerMinSecurityLevel(this.getHostname());
+    }
+
+    isMaximumMoney(): boolean {
+        return this.getMaxMoney() == this.getMoneyAvailable();
     }
 
     getWeakenTime(): number {
-        return this.ns.getWeakenTime(this.server.hostname);
+        return this.ns.getWeakenTime(this.getHostname());
     }
 
     getHackTime(): number {
-        return this.ns.getHackTime(this.server.hostname);
+        return this.ns.getHackTime(this.getHostname());
     }
 
     getGrowTime(): number {
-        return this.ns.getGrowTime(this.server.hostname);
+        return this.ns.getGrowTime(this.getHostname());
     }
 
     getAvailableMoney(): number {
-        return this.server.moneyAvailable ?? 0;
+        return this.ns.getServerMoneyAvailable(this.getHostname());
     }
 
     getMaxMoney(): number {
-        return this.server.moneyMax ?? 0;
+        return this.ns.getServerMaxMoney(this.getHostname());
     }
 
     getHostname(): string {
-        return this.server.hostname;
+        return this.hostname;
     }
 
     getScriptThreads(script: Script): number {
-        return Math.floor( this.getSchedulableRAM() / script.getScriptRamOn(this) );
+        let schedulableRam = this.getSchedulableRAM();
+        let scriptRam = script.getScriptRamOn();
+        return Math.floor( schedulableRam / scriptRam );
     }
 
     getSchedulableRAM(): number {
@@ -87,15 +107,23 @@ export class Node {
     }
 
     getUsedRAM(): number {
-        return this.server.ramUsed;
+        return this.ns.getServerUsedRam(this.getHostname());
     }
 
     getFreeRAM(): number {
-        return this.server.maxRam - this.server.ramUsed;
+        return this.getTotalRAM() - this.getUsedRAM();
     }
 
     getTotalRAM(): number {
-        return this.server.maxRam;
+        return this.ns.getServerMaxRam(this.getHostname());
+    }
+
+    getRequiredHackingLevel(): number {
+        return this.ns.getServerRequiredHackingLevel(this.getHostname());
+    }
+
+    getServerGrowth(): number {
+        return this.ns.getServerGrowth(this.getHostname());
     }
 
     private getCrackers(): ((host: string) => void)[] {
@@ -126,20 +154,19 @@ export class Node {
 
     pretty(): any {
         return {
-            "Name": this.server.hostname,
-            "Root access": this.server.hasAdminRights,
+            "hostname": this.hostname,
+            "isRooted": this.isRooted(),
             "Total RAM": this.ns.formatRam(this.getTotalRAM()),
             "Reserved RAM": this.ns.formatRam(this.reservedRAM),
             "Schedulable RAM": this.ns.formatRam(this.getSchedulableRAM()),
             "Used RAM": this.ns.formatRam(this.getUsedRAM()),
-            "Minimum hacking level": this.server.requiredHackingSkill,
-            "Current security level": this.server.hackDifficulty,
-            "Minimum security level": this.server.minDifficulty,
-            "Current money": this.ns.formatNumber(this.server.moneyAvailable!),
-            "Maximum money": this.ns.formatNumber(this.server.moneyMax!),
-            "Growth factor": this.server.serverGrowth,
-            "Needed open Ports": this.server.numOpenPortsRequired,
+            "Minimum hacking level": this.getRequiredHackingLevel(),
+            "Current security level": this.getSecurityLevel(),
+            "Minimum security level": this.getMinSecurityLevel(),
+            "Current money": this.ns.formatNumber(this.getAvailableMoney()),
+            "Maximum money": this.ns.formatNumber(this.getMaxMoney()),
+            "Growth factor": this.getServerGrowth(),
+            "Needed open Ports": this.getOpenPortsRequired(),
         }
     }
-
 }
