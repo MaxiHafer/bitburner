@@ -34,6 +34,19 @@ export class Cluster {
         this.update();
     }
 
+    getHackableNodes(): Node[] {
+        return this.nodes.filter(node => {return (
+            node.isRooted() &&
+            node.getHostname() !== "home" &&
+            !node.getHostname().startsWith("srv") &&
+            node.getMaxMoney() > 0
+        )});
+    }
+
+    getAllNodes(): Node[] {
+        return this.nodes;
+    }
+
     getFilteredNodesForScheduling(): Node[] {
        return this.nodes.filter(node => node.isRooted() && node.getSchedulableRAM() > 0).sort((a, b) => a.scheduleOrder - b.scheduleOrder );
     }

@@ -3,27 +3,17 @@
 // made slashing more reliable.
 // add support for "SoA - Chaos of Dionysus" aug.
 
-type GameState = {
-    company: string,
-    started: boolean,
-    game: {
-        data: any| undefined
-    }
-}
-
-const state: GameState = {
+const state = {
     // Name of the company that's infiltrated.
     company: "",
 
     // Whether infiltration started. False means, we're
-    // waiting to arrive at the infiltration screen.
+    // waiting to arrive on the infiltration screen.
     started: false,
 
-    // Details/state of the current mini-game.
+    // Details/state of the current mini game.
     // Is reset after every game.
-    game: {
-        data: [],
-    },
+    game: {},
 };
 
 // Speed of game actions, in milliseconds.
@@ -32,25 +22,33 @@ const speed = 22;
 // Small hack to save RAM.
 // This will work smoothly, because the script does not use
 // any "ns" functions, it's a pure browser automation tool.
-const wnd: Window = eval("window");
-const doc: Document = wnd["document"];
-
-type InfiltrationGame = {
-    name: string
-    init: (screen: string | Document) => void;
-    play: (screen: string | Document) => void;
-}
+const wnd = eval("window");
+const doc = wnd["document"];
 
 // List of all games and an automated solver.
-const infiltrationGames: InfiltrationGame[] = [
+const infiltrationGames = [
     {
         name: "type it backward",
-        init: function (screen: string | Document) {
+        init: function (screen) {
             const lines = getLines(getEl(screen, "p"));
             state.game.data = lines[0].split("");
         },
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        play: function (screen: string | Document) {
+        play: function (screen) {
+            if (!state.game.data || !state.game.data.length) {
+                delete state.game.data;
+                return;
+            }
+
+            pressKey(state.game.data.shift());
+        },
+    },
+    {
+        name: "type it backward",
+        init: function (screen) {
+            const lines = getLines(getEl(screen, "p"));
+            state.game.data = lines[0].split("");
+        },
+        play: function (screen) {
             if (!state.game.data || !state.game.data.length) {
                 delete state.game.data;
                 return;
@@ -65,7 +63,6 @@ const infiltrationGames: InfiltrationGame[] = [
             const lines = getLines(getEl(screen, "p"));
             state.game.data = lines[0].split("");
         },
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         play: function (screen) {
             if (!state.game.data || !state.game.data.length) {
                 delete state.game.data;
@@ -77,8 +74,7 @@ const infiltrationGames: InfiltrationGame[] = [
     },
     {
         name: "enter the code",
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        init: function (screen) { return },
+        init: function (screen) { },
         play: function (screen) {
             const h4 = getEl(screen, "h4");
             const code = h4[1].textContent;
@@ -120,7 +116,6 @@ const infiltrationGames: InfiltrationGame[] = [
                 }
             }
         },
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         play: function (screen) {
             if (!state.game.data || !state.game.data.length) {
                 delete state.game.data;
@@ -132,29 +127,27 @@ const infiltrationGames: InfiltrationGame[] = [
     },
     {
         name: "attack when his guard is down",
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         init: function (screen) {
-            state.game.data = ["wait"];
+            state.game.data = "wait";
         },
         play: function (screen) {
             const data = getLines(getEl(screen, "h4"));
 
-            if ("attack" === state.game.data?.[0]) {
+            if ("attack" === state.game.data) {
                 pressKey(" ");
-                state.game.data = ["done"];
+                state.game.data = "done";
             }
 
             // Attack in next frame - instant attack sometimes
             // ends in failure.
-            if ('wait' === state.game.data?.[0] && (data.indexOf("Preparing?") !== -1)) {
-                state.game.data = ["attack"];
+            if ('wait' === state.game.data && (data.indexOf("Preparing?") !== -1)) {
+                state.game.data = "attack";
             }
         },
     },
     {
         name: "say something nice about the guard",
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        init: function (screen) { return },
+        init: function (screen) { },
         play: function (screen) {
             const correct = [
                 "affectionate",
@@ -230,7 +223,7 @@ const infiltrationGames: InfiltrationGame[] = [
                 for (let x = 0; x < gridSize[0]; x++) {
                     //for each column in the row add to state data if it has a child
                     if (rows[index].children.length > 0) {
-                        (<string[]>state.game.data[y]).push(true);
+                        state.game.data[y].push(true);
                     } else state.game.data[y].push(false);
                     index += 1;
                 }
@@ -513,10 +506,10 @@ function infLoop() {
  * Returns a list of DOM elements from the main game
  * container.
  */
-function getEl(parent: Document | string, selector: string) {
+function getEl(parent, selector) {
     let prefix = ":scope";
 
-    if (typeof parent === "string") {
+    if ("string" === typeof parent) {
         selector = parent;
         parent = doc;
 
@@ -529,16 +522,15 @@ function getEl(parent: Document | string, selector: string) {
             prefix = ".MuiContainer-root>.MuiPaper-root";
         }
         if (!doc.querySelectorAll(prefix).length) {
-            return new NodeList();
+            return [];
         }
     }
 
-    const selectors = selector
-        .split(",")
-        .map(item => `${prefix} ${item}`)
-        .join(",");
+    selector = selector.split(",");
+    selector = selector.map((item) => `${prefix} ${item}`);
+    selector = selector.join(",");
 
-    return parent.querySelectorAll(selectors);
+    return parent.querySelectorAll(selector);
 }
 
 /**
@@ -564,9 +556,9 @@ function filterByText(elements, text) {
  * @param {NodeList} elements
  * @returns {string[]}
  */
-function getLines(elements: NodeList): string[] {
-    const lines: string[] = [];
-    elements.forEach((e) => lines.push(e.textContent ?? ""));
+function getLines(elements) {
+    const lines = [];
+    elements.forEach((el) => lines.push(el.textContent));
 
     return lines;
 }

@@ -36,6 +36,10 @@ export class Batch {
         return this.targetExtract;
     }
 
+    getTotalBatchTime(): number {
+        return this.target.getWeakenTime() + (this.target.getGrowTime() * 2) + this.target.getHackTime() + (scriptDelay * 4)
+    }
+
     async run(): Promise<number> {
         this.target.update();
 
@@ -109,9 +113,9 @@ export async function main(ns: NS){
     // eslint-disable-next-line no-constant-condition
     while(true) {
         if (!target.isMinimumSecurity()) {
-            let deltaSecurity = target.getSecurityLevel() - target.getMinSecurityLevel();
-            let weakenThreads = Math.ceil(deltaSecurity / securityDecreasePerWeaken);
-            let weakenTime = ns.getWeakenTime(target.getHostname());
+            const deltaSecurity = target.getSecurityLevel() - target.getMinSecurityLevel();
+            const weakenThreads = Math.ceil(deltaSecurity / securityDecreasePerWeaken);
+            const weakenTime = ns.getWeakenTime(target.getHostname());
 
             log.info(`target is not at minimum security, waiting for weaken to complete, ${formatTime(weakenTime)}`, {node: target.getHostname(), deltaSecurity: deltaSecurity})
 
@@ -126,22 +130,22 @@ export async function main(ns: NS){
         }
 
         if (!target.isMaximumMoney()) {
-            let growthFactor = target.getMaxMoney() / target.getMoneyAvailable();
-            let growThreads = Math.ceil(ns.growthAnalyze(target.getHostname(), growthFactor));
-            let growSecurityIncrease = ns.growthAnalyzeSecurity(growThreads, target.getHostname());
-            let growWeakenThreads = Math.ceil(growSecurityIncrease / securityDecreasePerWeaken);
+            const growthFactor = target.getMaxMoney() / target.getMoneyAvailable();
+            const growThreads = Math.ceil(ns.growthAnalyze(target.getHostname(), growthFactor));
+            const growSecurityIncrease = ns.growthAnalyzeSecurity(growThreads, target.getHostname());
+            const growWeakenThreads = Math.ceil(growSecurityIncrease / securityDecreasePerWeaken);
 
-            let growTime = ns.getGrowTime(target.getHostname());
-            let weakenTime = ns.getWeakenTime(target.getHostname());
+            const growTime = ns.getGrowTime(target.getHostname());
+            const weakenTime = ns.getWeakenTime(target.getHostname());
 
-            let weakenDelay = growTime + scriptDelay - weakenTime;
+            const weakenDelay = growTime + scriptDelay - weakenTime;
 
             log.info(`target is not at maximum money, waiting for grow and weaken to complete, ${formatTime(weakenTime + weakenDelay +scriptDelay)}`, {node: target.getHostname(), growthFactor: growthFactor});
 
-            let growScript = new Script(ns, log, node, scripts.grow, growThreads, target.getHostname(), 0);
-            let growWeakenScript = new Script(ns, log, node, scripts.weaken, growWeakenThreads, target.getHostname(), weakenDelay);
+            const growScript = new Script(ns, log, node, scripts.grow, growThreads, target.getHostname(), 0);
+            const growWeakenScript = new Script(ns, log, node, scripts.weaken, growWeakenThreads, target.getHostname(), weakenDelay);
 
-            let job = new Job(ns, log, `prepare-batch-grow-${target.getHostname()}`);
+            const job = new Job(ns, log, `prepare-batch-grow-${target.getHostname()}`);
             job.addScripts(growScript, growWeakenScript);
 
             await cluster.execute(job);

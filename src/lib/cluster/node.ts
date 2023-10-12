@@ -8,7 +8,95 @@ export type NodeOpts = {
     scheduleOrder?: number,
 }
 
-export class Node {
+export interface INode {
+    getOpenPortsRequired(): number
+    isRooted(): boolean
+    getMinSecurityLevel(): number
+    getSecurityLevel(): number
+    getMoneyAvailable(): number
+    getMaxMoney(): number
+    getWeakenTime(): number
+    getHackTime(): number
+    getGrowTime(): number
+    getHostname(): string
+    getRequiredHackingLevel(): number
+    getServerGrowth(): number
+}
+
+export class MockNode implements INode {
+    private hostname: string;
+    private rootAccess: boolean;
+    private numOpenPorts: number;
+    private minSecurityLevel: number;
+    private currentSecurityLevel: number;
+    private currentMoney: number;
+    private maxMoney: number;
+    private requiredHackingLevel: number;
+    private growth: number;
+
+    constructor(
+        hostname: string,
+        isRooted: boolean,
+        numOpenPorts: number,
+        minSecurityLevel: number,
+        currentSecurityLevel: number,
+        currentMoney: number,
+        maxMoney: number,
+        requiredHackingLevel: number,
+        growth: number
+    ) {
+        this.hostname = hostname;
+        this.rootAccess = isRooted;
+        this.numOpenPorts = numOpenPorts;
+        this.minSecurityLevel = minSecurityLevel;
+        this.currentSecurityLevel = currentSecurityLevel;
+        this.currentMoney = currentMoney;
+        this.maxMoney = maxMoney;
+        this.requiredHackingLevel = requiredHackingLevel;
+        this.growth = growth;
+    }
+
+    getOpenPortsRequired(): number {
+        return this.numOpenPorts;
+    }
+    isRooted(): boolean {
+        return this.rootAccess;
+    }
+    getMinSecurityLevel(): number {
+        return this.minSecurityLevel;
+    }
+    getSecurityLevel(): number {
+        return this.currentSecurityLevel;
+    }
+    getMoneyAvailable(): number {
+        return this.currentMoney;
+    }
+    getMaxMoney(): number {
+        return this.maxMoney;
+    }
+    getWeakenTime(): number {
+        throw new Error("Method not implemented.");
+    }
+    getHackTime(): number {
+        throw new Error("Method not implemented.");
+    }
+    getGrowTime(): number {
+        throw new Error("Method not implemented.");
+    }
+    getHostname(): string {
+        return this.hostname;
+    }
+    getRequiredHackingLevel(): number {
+       return this.requiredHackingLevel;
+    }
+    getServerGrowth(): number {
+        return this.growth;
+    }
+
+
+}
+
+export class Node implements INode {
     ns: NS;
     log: JSONLogger;
 
@@ -84,10 +172,6 @@ export class Node {
         return this.ns.getGrowTime(this.getHostname());
     }
 
-    getAvailableMoney(): number {
-        return this.ns.getServerMoneyAvailable(this.getHostname());
-    }
-
     getMaxMoney(): number {
         return this.ns.getServerMaxMoney(this.getHostname());
     }
@@ -97,8 +181,8 @@ export class Node {
     }
 
     getScriptThreads(script: Script): number {
-        let schedulableRam = this.getSchedulableRAM();
-        let scriptRam = script.getScriptRamOn();
+        const schedulableRam = this.getSchedulableRAM();
+        const scriptRam = script.getScriptRamOn();
         return Math.floor( schedulableRam / scriptRam );
     }
 
@@ -163,7 +247,7 @@ export class Node {
             "Minimum hacking level": this.getRequiredHackingLevel(),
             "Current security level": this.getSecurityLevel(),
             "Minimum security level": this.getMinSecurityLevel(),
-            "Current money": this.ns.formatNumber(this.getAvailableMoney()),
+            "Current money": this.ns.formatNumber(this.getMoneyAvailable()),
             "Maximum money": this.ns.formatNumber(this.getMaxMoney()),
             "Growth factor": this.getServerGrowth(),
             "Needed open Ports": this.getOpenPortsRequired(),

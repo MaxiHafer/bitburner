@@ -91,6 +91,10 @@ export class JSONLogger {
         this.ns.disableLog("ALL");
     }
 
+    tinfo(msg: string, fields?: object): void {
+        this.tprint(new LogMessage(LogLevel.INFO, msg, fields));
+    }
+
     info(msg: string, fields?: object): void {
         this.print(new LogMessage(LogLevel.INFO, msg, fields))
     }
@@ -107,6 +111,12 @@ export class JSONLogger {
         this.print(new LogMessage(LogLevel.DEBUG, msg, fields));
     }
 
+
+    tprint(msg: LogMessage): void {
+        if (this.opts.debug || (!(msg.level === LogLevel.DEBUG))) {
+            this.ns.tprintf("%s",msg.toString(this.opts.pretty ? "\t" : undefined))
+        }
+    }
 
     print(msg: LogMessage): void {
         if (this.opts.debug || (!(msg.level === LogLevel.DEBUG))) {
