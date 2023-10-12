@@ -9,6 +9,7 @@ export async function main(ns: NS): Promise<void> {
     const args = ns.flags([
         ["hackable", false],
         ["cluster", false],
+        ["all", false],
     ]);
 
     const log = new JSONLogger(ns,{pretty: true});
@@ -16,6 +17,13 @@ export async function main(ns: NS): Promise<void> {
     const homeNode = new Node(ns, log, "home");
 
     const cluster = new Cluster(ns, log, homeNode);
+
+    if (args.all) {
+        cluster.getAllNodes().sort((a, b) => a.getRequiredHackingLevel() - b.getRequiredHackingLevel()).forEach( node => {
+            node.update();
+            log.tinfo("", node.pretty());
+        })
+    }
 
     if (args.hackable) {
         cluster.getHackableNodes().sort((a, b) => a.getRequiredHackingLevel() - b.getRequiredHackingLevel()).forEach( node => {

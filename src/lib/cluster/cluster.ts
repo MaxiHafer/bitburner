@@ -39,6 +39,7 @@ export class Cluster {
             node.isRooted() &&
             node.getHostname() !== "home" &&
             !node.getHostname().startsWith("srv") &&
+            node.getRequiredHackingLevel() < this.ns.getHackingLevel() &&
             node.getMaxMoney() > 0
         )});
     }
